@@ -8,5 +8,9 @@ let package = Package(
         .executableTarget(
             name: "blocksay"
         ),
+        .testTarget(
+            name: "blocksayTests",
+            dependencies: ["blocksay"]
+        ),
     ]
 )
