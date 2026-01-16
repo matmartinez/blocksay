@@ -5,11 +5,13 @@
 //  Created by Matías Martínez on 15/1/26.
 //
 
+import Foundation
+
 @main
 struct App {
   
   static func main() {
-    let input = CommandLine.arguments[1...].joined()
+    let input = CommandLine.arguments.dropFirst().joined()
     
     guard !input.isEmpty else {
         return

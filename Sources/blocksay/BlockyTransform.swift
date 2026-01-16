@@ -5,8 +5,6 @@
 //  Created by Matías Martínez on 15/1/26.
 //
 
-import Foundation
-
 struct BlockyTransform {
   var font: BlockyFont = .defaultFont
   var letterSpacing: Int = 1
@@ -16,46 +14,64 @@ extension StringProtocol {
   
   func applyingBlockyTransform(_ transform: BlockyTransform) -> String {
     let font = transform.font
-    let letterSpacer = Array(repeating: " ", count: transform.letterSpacing).joined()
-    
-    let asciiArtLines = font.ascii.split(separator: "\n")
+    let letterSpacing = transform.letterSpacing
+    let letterSpacer = String(repeating: " ", count: letterSpacing)
     let characterWidths = font.characterWidths
-    let cumulativeOffsets = font.cummulativeCharacterOffsets
-    
-    let normalized = lowercased()
-    var lines: [String] = []
+    let glyphsByLine = font.glyphsByLine
+    let lineCount = glyphsByLine.count
 
-    for lineIndex in 0..<asciiArtLines.count {
-      var outputLine = ""
-
-      for scalar in normalized.unicodeScalars {
-        guard scalar.value >= 97 && scalar.value <= 122 else { continue } // a-z
-
-        let letterIndex = Int(scalar.value - 97)
-        let startOffset = cumulativeOffsets[letterIndex]
-        let width = characterWidths[letterIndex]
-
-        outputLine += asciiArtLines[lineIndex].substring(start: startOffset, length: width)
-        outputLine += letterSpacer
+    var letterIndexes: [Int] = []
+    var totalGlyphWidth = 0
+    for scalar in unicodeScalars {
+      let value = scalar.value
+      let letterIndex: Int
+      if value >= 65 && value <= 90 { // A-Z
+        letterIndex = Int(value - 65)
+      } else if value >= 97 && value <= 122 { // a-z
+        letterIndex = Int(value - 97)
+      } else {
+        continue
       }
 
-      lines.append(outputLine)
+      letterIndexes.append(letterIndex)
+      totalGlyphWidth += characterWidths[letterIndex]
     }
-    
-    return lines.joined(separator: "\n")
+
+    guard lineCount > 0 else { return "" }
+    guard !letterIndexes.isEmpty else {
+      return String(repeating: "\n", count: lineCount - 1)
+    }
+
+    let totalSpacingWidth = letterSpacing * letterIndexes.count
+    let perLineCapacity = totalGlyphWidth + totalSpacingWidth
+
+    var output = String()
+    output.reserveCapacity((perLineCapacity + 1) * lineCount)
+
+    if letterSpacing == 0 {
+      for lineIndex in 0..<lineCount {
+        let lineGlyphs = glyphsByLine[lineIndex]
+        for letterIndex in letterIndexes {
+          output.append(contentsOf: lineGlyphs[letterIndex])
+        }
+        if lineIndex + 1 < lineCount {
+          output.append("\n")
+        }
+      }
+    } else {
+      for lineIndex in 0..<lineCount {
+        let lineGlyphs = glyphsByLine[lineIndex]
+        for letterIndex in letterIndexes {
+          output.append(contentsOf: lineGlyphs[letterIndex])
+          output.append(contentsOf: letterSpacer)
+        }
+        if lineIndex + 1 < lineCount {
+          output.append("\n")
+        }
+      }
+    }
+
+    return output
   }
   
-}
-
-fileprivate extension String.SubSequence {
-  func substring(start: Int, length: Int) -> String {
-    guard length > 0 else { return "" }
-    guard start >= 0 else { return "" }
-
-    let startIndex = index(self.startIndex, offsetBy: start, limitedBy: endIndex) ?? endIndex
-    let endIndex = index(startIndex, offsetBy: length, limitedBy: self.endIndex) ?? self.endIndex
-
-    if startIndex >= endIndex { return "" }
-    return String(self[startIndex..<endIndex])
-  }
 }
